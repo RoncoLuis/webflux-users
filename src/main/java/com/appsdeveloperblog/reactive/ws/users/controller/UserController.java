@@ -43,34 +43,14 @@ public class UserController {
                         .location(URI.create("/users/" + userRequest.getId()))
                         .body(userRequest)
                 );
-
-        /* return createUserRequest.map(request -> new UsersRestDTO(UUID.randomUUID(),
-                        request.getFirstName(),
-                        request.getLastName(),
-                        request.getEmail()))
-                .map(userRest -> ResponseEntity
-                        .status(HttpStatus.CREATED)
-                        .location(URI.create("/users/" + userRest.getId()))
-                        .body(userRest));*/
-
     }
 
-    /*
-     * Mono return one user
-     * */
+    /** Mono return one user**/
     @GetMapping("/{userId}") // http://localhost:8080/users/{userId}
     public Mono<ResponseEntity<UsersRestDTO>> getUserById(@PathVariable("userId") UUID userId) {
         return userService.getUserById(userId)
                 .map(userRequest -> ResponseEntity.status(HttpStatus.OK).body(userRequest))
                 .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build()));
-
-        /*//Fake return. We still need to work with the DB layer
-        return Mono.just(new UsersRestDTO(
-                userId,
-                "Natalia",
-                "Ronquillo",
-                "Natalia@SpringBoot.com"
-        ));*/
     }
 
     /*
@@ -84,13 +64,6 @@ public class UserController {
     ) {
         //note: page 1 starts in page 0
         return userService.findAllBy(page, limit);
-
-        //hardcoded implementation
-       /* return Flux.just(
-                new UsersRestDTO(UUID.randomUUID(), "Luis", "Ronquillo", "luis@springboot.com"),
-                new UsersRestDTO(UUID.randomUUID(), "Martha", "Rocha", "martha@springboot.com"),
-                new UsersRestDTO(UUID.randomUUID(), "Natalia", "Ronquillo Rocha", "natalia@springboot.com")
-        );*/
     }
 
     @GetMapping("/list") // http://localhost:8080/users/list
