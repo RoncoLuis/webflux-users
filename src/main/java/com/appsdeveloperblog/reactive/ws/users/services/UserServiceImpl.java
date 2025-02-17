@@ -28,25 +28,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<UsersRestDTO> createUser(Mono<CreateUserRequest> createUserRequestMono) {
-        return createUserRequestMono.mapNotNull(this::convertToEntity).flatMap(userRepository::save) //this line needs to be handled with an exception
-                .mapNotNull(this::convertToRest)
-                //.onErrorMap(DuplicateKeyException.class, exception -> new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage()) //this method handles one specific exception (like duplicate keys)
-                //this method handles multiple exceptions and detects specific errors (inside the if clause)
-                .onErrorMap(throwable -> {
-                    if (throwable instanceof DuplicateKeyException) {
-                        return new ResponseStatusException(HttpStatus.CONFLICT, throwable.getMessage());
-                    } else if (throwable instanceof DataIntegrityViolationException) {
-                        //this error validate that all the constraints in our db table must be accomplished
-                        return new ResponseStatusException(HttpStatus.BAD_REQUEST, throwable.getMessage());
-                    } else {
-                        return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-                    }
-                });
-        //return without method reference format (this is more readable)
-        /*return createUserRequestMono
-                .mapNotNull(userRequest -> convertToEntity(userRequest))
-                .flatMap(userEntity -> userRepository.save(userEntity))
-                .mapNotNull(userRestDTO -> convertToRest(userRestDTO));*/
+        return createUserRequestMono
+                .mapNotNull(this::convertToEntity)
+                .flatMap(userRepository::save) //this line needs to be handled with an exception
+                .mapNotNull(this::convertToRest);
     }
 
     @Override
