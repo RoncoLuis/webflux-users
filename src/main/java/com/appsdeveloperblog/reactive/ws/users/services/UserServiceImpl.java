@@ -10,10 +10,13 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.UUID;
 
@@ -21,15 +24,18 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    /*If we were to inject the entire WebSecurityConfiguration class, we would be introducing an unnecessary dependency, and the UserServiceImpl class would have access to more functionality than it needs.*/
+    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public Mono<UsersRestDTO> createUser(Mono<CreateUserRequest> createUserRequestMono) {
         return createUserRequestMono
-                .mapNotNull(this::convertToEntity)
+                .flatMap(this::convertToEntity)
                 .flatMap(userRepository::save) //this line needs to be handled with an exception
                 .mapNotNull(this::convertToRest);
     }
@@ -49,10 +55,16 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAllBy(pageable).mapNotNull(this::convertToRest);
     }
 
-    private UserEntity convertToEntity(CreateUserRequest createUserRequest) {
-        UserEntity userEntity = new UserEntity();
-        BeanUtils.copyProperties(createUserRequest, userEntity);
-        return userEntity;
+    private Mono<UserEntity> convertToEntity(CreateUserRequest createUserRequest) {
+        return Mono.fromCallable(() -> {
+            UserEntity userEntity = new UserEntity();
+            BeanUtils.copyProperties(createUserRequest, userEntity);
+            //Encrypting password
+            userEntity.setPassword(passwordEncoder.encode(createUserRequest.getPassword()));
+            return userEntity;
+        }).subscribeOn(Schedulers.boundedElastic());
+
+
     }
 
     private UsersRestDTO convertToRest(UserEntity userEntity) {
